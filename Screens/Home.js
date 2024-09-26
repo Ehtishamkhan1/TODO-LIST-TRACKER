@@ -9,20 +9,15 @@ import {
   TextInput,
   Alert,
   ToastAndroid,
-  RefreshControl
+  RefreshControl,
 } from "react-native"; // Importing React Native components
-import React, { useEffect, useState,useCallback } from "react"; // Importing hooks from React
+import React, { useEffect, useState, useCallback } from "react"; // Importing hooks from React
 import Ionicons from "@expo/vector-icons/Ionicons"; // Importing Ionicons for icons
 import Modal from "react-native-modal"; // Importing Modal for pop-up
-import { firebase } from "../Config"; // Importing Firebase 
+import { firebase } from "../Config"; // Importing Firebase
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import Entypo from '@expo/vector-icons/Entypo';
-import Feather from '@expo/vector-icons/Feather';
-
-
-
-
-
+import Entypo from "@expo/vector-icons/Entypo";
+import Feather from "@expo/vector-icons/Feather";
 
 const Home = () => {
   const [todos, settodos] = useState([]); // State to hold todo items
@@ -33,7 +28,7 @@ const Home = () => {
   const [Completed, setCompleted] = useState([]); // State to store the number of completed todos
   const [refreshing, setRefreshing] = useState(false);
   const [datetimeopen, setdatetimeopen] = useState(false); // State to handle date picker visibility
-  
+
   // Sample todo suggestions
   const todoSuggestions = [
     { id: 1, todo: "Drink water" },
@@ -48,56 +43,57 @@ const Home = () => {
   const togglemodal = () => {
     setShowModal(!showModal);
   };
- 
-  const handlereferesh= async ()=>{
+
+  const handlereferesh = async () => {
     setRefreshing(true);
     await fetchtodo();
     setRefreshing(false);
-  }
+  };
 
-  const handleConfirm = (date) => {;
-    const options={
-      day: 'numeric', 
-      month: 'long',
-      year: 'numeric', 
-      
+  const handleConfirm = (date) => {
+    const options = {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      hour12: true 
-    }
-    const formateddate=date.toLocaleDateString('en-US',options)
-    
-    if(formateddate){
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    };
+    const formateddate = date.toLocaleDateString("en-US", options);
+
+    if (formateddate) {
       console.log(formateddate);
       setdatetimeopen(false);
       addTodo(formateddate);
       togglemodal();
     }
-    
-  }
+  };
 
   const hideDatePicker = () => {
     console.log("closed");
     setdatetimeopen(false);
-    
-  }
+  };
 
   // Function to add a new todo to the Firebase Firestore
-  const addTodo = async ( formateddate ) => {
+  const addTodo = async (formateddate) => {
     try {
       // Preparing the todo data
       if (!todo) {
         Alert.alert("Please enter a todo");
         return;
       }
-      if( !Category ){
+      if (!Category) {
         Alert.alert("PLease Select a Category");
         return;
       }
-    
 
-      const tododata = { todo: todo, category: Category, Status: "Pending", date: formateddate };
+      const tododata = {
+        todo: todo,
+        category: Category,
+        Status: "Pending",
+        date: formateddate,
+      };
 
       // Fetching the user ID from Firebase Authentication
       const userid = await firebase.auth().currentUser.uid;
@@ -112,9 +108,9 @@ const Home = () => {
 
       // Closing the modal after adding the todo
       togglemodal();
-      
-      setCategory("")
-      settodo("")
+
+      setCategory("");
+      settodo("");
       // Showing a toast message with black color
       ToastAndroid.show("Todo Added", ToastAndroid.SHORT);
     } catch (error) {
@@ -151,7 +147,6 @@ const Home = () => {
         (todo) => todo.Status === "Completed"
       );
 
-  
       setCompleted(completedtodos);
     } catch (error) {
       console.log(error); // Log any error that occurs
@@ -159,60 +154,79 @@ const Home = () => {
   };
 
   useEffect(() => {
-    
     fetchtodo(); // Call the fetch function
   }, [todo]); // Dependencies: 'todo' state
 
+  const OnLongPress = useCallback(
+    (id) => {
+      Alert.alert(
+        "Todo Options",
+        "What would you like to do?",
+        [
+          {
+            text: "Cancel",
+            onPress: () => console.log("Cancel Pressed"),
+            style: "cancel",
+          },
+          {
+            text: "Completed",
+            onPress: () => completeTodo(id),
+          },
+          {
+            text: "Delete",
+            onPress: () => deleteTodo(id),
+          },
+        ],
+        { cancelable: false }
+      );
+    },
+    [completeTodo, deleteTodo]
+  );
 
-  const OnLongPress = useCallback((id) => {
-    Alert.alert(
-      "Todo Options",
-      "What would you like to do?",
-      [
-        {
-          text: "Cancel",
-          onPress: () => console.log("Cancel Pressed"),
-          style: "cancel",
-        },
-        {
-          text: "Completed",
-          onPress: () => completeTodo(id),
-        },
-        {
-          text: "Delete",
-          onPress: () => deleteTodo(id),
-        },
-      ],
-      { cancelable: false }
-    );
-  }, [completeTodo, deleteTodo]);
-  
-  const completeTodo = useCallback(async (id) => {
-    try {
-      const uid = await firebase.auth().currentUser.uid;
-      await firebase.firestore().collection("User").doc(uid).collection("Todos").doc(id).update({ Status: "Completed" });
-      
-      ToastAndroid.show("Todo Completed", ToastAndroid.SHORT);
-      settodos(prev => prev.map((item) => item.id === id ? { ...item, Status: "Completed" } : item));
-      setCompleted(todos.filter((todo) => todo.Status === "Completed"));
-      settodos(prev => prev.filter((todo) => todo.Status !== "Completed"));
-    } catch (e) {
-      console.log(e);
-    }
-  }, [todos]);
-  
+  const completeTodo = useCallback(
+    async (id) => {
+      try {
+        const uid = await firebase.auth().currentUser.uid;
+        await firebase
+          .firestore()
+          .collection("User")
+          .doc(uid)
+          .collection("Todos")
+          .doc(id)
+          .update({ Status: "Completed" });
+
+        ToastAndroid.show("Todo Completed", ToastAndroid.SHORT);
+        settodos((prev) =>
+          prev.map((item) =>
+            item.id === id ? { ...item, Status: "Completed" } : item
+          )
+        );
+        setCompleted(todos.filter((todo) => todo.Status === "Completed"));
+        settodos((prev) => prev.filter((todo) => todo.Status !== "Completed"));
+      } catch (e) {
+        console.log(e);
+      }
+    },
+    [todos]
+  );
+
   const deleteTodo = useCallback(async (id) => {
     try {
       const uid = await firebase.auth().currentUser.uid;
-      await firebase.firestore().collection("User").doc(uid).collection("Todos").doc(id).delete();
-      
-      settodos(prev => prev.filter((todo) => todo.id !== id));
+      await firebase
+        .firestore()
+        .collection("User")
+        .doc(uid)
+        .collection("Todos")
+        .doc(id)
+        .delete();
+
+      settodos((prev) => prev.filter((todo) => todo.id !== id));
       ToastAndroid.show("Todo Deleted", ToastAndroid.SHORT);
     } catch (e) {
       console.log(e);
     }
   }, []);
-  
 
   return (
     <SafeAreaView style={{ marginTop: 30 }}>
@@ -270,54 +284,61 @@ const Home = () => {
 
       {/* List of Todos */}
       <ScrollView
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handlereferesh} 
-        tintColor="blue"
-        title="Refereshing..."
-        titleColor="blue"
-        />
-      }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handlereferesh}
+            tintColor="blue"
+            title="Refereshing..."
+            titleColor="blue"
+          />
+        }
       >
         <View style={{ padding: 20 }}>
-         
-          {
-          todos?.length > 0  ? (
-
+          {todos?.length > 0 ? (
             <View>
-              {
-            todos.map((todoItem) => (
+              {Pending.length > 0 && (
+                <View>
+                  {todos.map((todoItem) => (
+                    <TouchableOpacity
+                      onLongPress={() => OnLongPress(todoItem.id)}
+                      key={todoItem.id}
+                      style={{
+                        backgroundColor: "#e0e0e0",
+                        padding: 10,
+                        borderRadius: 10,
+                        marginBottom: 10,
+                        marginVertical: 10,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <Entypo name="circle" size={24} color="black" />
+                        <Text style={{ flex: 1 }}>{todoItem.todo}</Text>
+                        <Feather name="flag" size={24} color="black" />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
-              <TouchableOpacity  onLongPress={() => OnLongPress(todoItem.id)} key={todoItem.id} 
-              style={{backgroundColor:"#e0e0e0", padding:10, borderRadius:10, marginBottom:10,marginVertical:10}}
-              >
-              <View
-                style={{flexDirection:"row", alignItems:"center",gap:10}}
-              >
-               
-                <Entypo name="circle" size={24} color="black" />
-                  <Text style={{flex:1}} >{todoItem.todo}</Text>
-                  <Feather name="flag" size={24} color="black" />
-
-                  </View>
-                </TouchableOpacity>
-              
-            ))
-          }
-            {
-  Completed.length > 0 && (
-    <View>
-      <Text style={{ fontSize: 20, fontWeight: "bold" }}>Completed</Text>
-      {
-        Completed.map((todoItem) => (
-          <View key={todoItem.id} style={{ marginVertical: 10 }}>
-            <Text style={{ fontSize: 16 }}>{todoItem.todo}</Text>
-           
-          </View>
-        ))
-      }
-    </View>
-  )
-}
+              {Completed.length > 0 && (
+                <View>
+                  <Text style={{ fontSize: 20, fontWeight: "bold" }}>
+                    Completed
+                  </Text>
+                  {Completed.map((todoItem) => (
+                    <View key={todoItem.id} style={{ marginVertical: 10 }}>
+                      <Text style={{ fontSize: 16 }}>{todoItem.todo}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           ) : (
             <View
@@ -343,10 +364,7 @@ const Home = () => {
                 <Ionicons name="add-circle-outline" size={50} color="#007fff" />
               </TouchableOpacity>
             </View>
-
-
           )}
-
         </View>
       </ScrollView>
 
@@ -395,7 +413,7 @@ const Home = () => {
               value={todo}
               onChangeText={(text) => settodo(text)}
             />
-            <TouchableOpacity onPress={()=>setdatetimeopen(true)}>
+            <TouchableOpacity onPress={() => setdatetimeopen(true)}>
               <Ionicons name="send" size={28} color="#007fff" />
             </TouchableOpacity>
           </View>
@@ -466,14 +484,13 @@ const Home = () => {
               </Text>
             </TouchableOpacity>
 
-                  <DateTimePickerModal
-                    isVisible={datetimeopen}
-                    mode="datetime"
-                    minimumDate={new Date()}
-                    onConfirm={handleConfirm}
-                    onCancel={hideDatePicker}
-                  />
-
+            <DateTimePickerModal
+              isVisible={datetimeopen}
+              mode="datetime"
+              minimumDate={new Date()}
+              onConfirm={handleConfirm}
+              onCancel={hideDatePicker}
+            />
           </View>
 
           <Text style={{ fontSize: 16, marginTop: 10 }}>Some Suggestions</Text>
@@ -509,4 +526,3 @@ const Home = () => {
 };
 
 export default Home;
- 
