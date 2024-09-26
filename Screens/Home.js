@@ -138,6 +138,7 @@ const Home = () => {
         ...doc.data(),
       }));
       settodos(todosdata);
+
       const pendingtodos = todosdata.filter(
         (todo) => todo.Status === "Pending"
       );
@@ -154,63 +155,61 @@ const Home = () => {
   };
 
   useEffect(() => {
-    fetchtodo(); // Call the fetch function
-  }, [todo]); // Dependencies: 'todo' state
+    fetchtodo();
+  }, [todo]);
 
-  const OnLongPress = useCallback(
-    (id) => {
-      Alert.alert(
-        "Todo Options",
-        "What would you like to do?",
-        [
-          {
-            text: "Cancel",
-            onPress: () => console.log("Cancel Pressed"),
-            style: "cancel",
-          },
-          {
-            text: "Completed",
-            onPress: () => completeTodo(id),
-          },
-          {
-            text: "Delete",
-            onPress: () => deleteTodo(id),
-          },
-        ],
-        { cancelable: false }
+  const OnLongPress = (id) => {
+    Alert.alert(
+      "Todo Options",
+      "What would you like to do?",
+      [
+        {
+          text: "Cancel",
+          onPress: () => console.log("Cancel Pressed"),
+          style: "cancel",
+        },
+        {
+          text: "Completed",
+          onPress: () => completeTodo(id),
+        },
+        {
+          text: "Delete",
+          onPress: () => deleteTodo(id),
+        },
+      ],
+      { cancelable: false }
+    );
+  };
+
+  const completeTodo = async (id) => {
+    try {
+      const uid = await firebase.auth().currentUser.uid;
+      await firebase
+        .firestore()
+        .collection("User")
+        .doc(uid)
+        .collection("Todos")
+        .doc(id)
+        .update({ Status: "Completed" });
+      
+      ToastAndroid.show("Todo Completed", ToastAndroid.SHORT);
+      settodos((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, Status: "Completed" } : item
+        )
       );
-    },
-    [completeTodo, deleteTodo]
-  );
+      
+      setPending(prev=> prev.filter((item)=>item.id !== id));
+      setCompleted(prev => [
+        ...prev,
+        ...todos.filter(item => item.id === id)
+      ]);
+    } catch (e) {
+      console.log(e);
+    }
+  };
 
-  const completeTodo = useCallback(
-    async (id) => {
-      try {
-        const uid = await firebase.auth().currentUser.uid;
-        await firebase
-          .firestore()
-          .collection("User")
-          .doc(uid)
-          .collection("Todos")
-          .doc(id)
-          .update({ Status: "Completed" });
-
-        ToastAndroid.show("Todo Completed", ToastAndroid.SHORT);
-        settodos((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, Status: "Completed" } : item
-          )
-        );
-        setCompleted(todos.filter((todo) => todo.Status === "Completed"));
-        settodos((prev) => prev.filter((todo) => todo.Status !== "Completed"));
-      } catch (e) {
-        console.log(e);
-      }
-    },
-    [todos]
-  );
-
-  const deleteTodo = useCallback(async (id) => {
+  const deleteTodo = async (id) => {
     try {
       const uid = await firebase.auth().currentUser.uid;
       await firebase
@@ -222,11 +221,19 @@ const Home = () => {
         .delete();
 
       settodos((prev) => prev.filter((todo) => todo.id !== id));
+      setPending(prev=> prev.filter((item)=>item.id !== id));
+      setCompleted(prev=> prev.filter((item)=>item.id !== id));
       ToastAndroid.show("Todo Deleted", ToastAndroid.SHORT);
     } catch (e) {
       console.log(e);
     }
-  }, []);
+  };
+
+  const consoleall = () => {
+    console.log(Pending);
+    console.log("now completed")
+    console.log(Completed);
+  }
 
   return (
     <SafeAreaView style={{ marginTop: 30 }}>
@@ -299,7 +306,7 @@ const Home = () => {
             <View>
               {Pending.length > 0 && (
                 <View>
-                  {todos.map((todoItem) => (
+                  {Pending.map((todoItem) => (
                     <TouchableOpacity
                       onLongPress={() => OnLongPress(todoItem.id)}
                       key={todoItem.id}
@@ -483,6 +490,26 @@ const Home = () => {
                 Wishlist
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: Category === "Wishlist" ? "black" : "white",
+                borderWidth: 1,
+                padding: 10,
+                borderRadius: 10,
+              }}
+              onPress={consoleall}
+            >
+              <Text
+                style={{
+                  fontSize: 15,
+                  color: Category === "Wishlist" ? "white" : "black",
+                }}
+              >
+                console all
+              </Text>
+            </TouchableOpacity>
+
 
             <DateTimePickerModal
               isVisible={datetimeopen}
